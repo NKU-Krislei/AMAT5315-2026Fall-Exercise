@@ -1,6 +1,6 @@
 # AMAT5315-2026Fall-Exercise
 
-Public weekly exercises for [AMAT5315-2026Fall: Modern Scientific Computing](https://giggleliu.github.io/AMAT5315-2026Fall/index.html) at HKUST(GZ). Owner: jlei.
+Public weekly exercises for [AMAT5315-2026Fall: Modern Scientific Computing](https://giggleliu.github.io/AMAT5315-2026Fall/index.html) at HKUST(GZ). Owner: Junjie LEI
 
 Work for each week lives in `week1/`, `week2/`, `week3/`, and so on. Week 1 estimates π by throwing random darts in the unit square.
 
