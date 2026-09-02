@@ -1,0 +1,3 @@
+Cursor agent: Grok 4.6
+Cursor: 3.18.25
+Python: 3.12.14 (conda env: modernSC)
