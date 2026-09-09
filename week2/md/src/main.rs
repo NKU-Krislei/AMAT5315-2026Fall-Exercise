@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use md::{check_artifacts, print_report, run_simulation, RunParams};
+use md::{check_artifacts, print_report, run_simulation, write_video, RunParams};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -85,9 +85,12 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
-        Commands::Video { .. } => {
-            eprintln!("md video is not implemented yet");
-            ExitCode::FAILURE
+        Commands::Video { dir, out } => {
+            if let Err(e) = write_video(&dir, &out) {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+            ExitCode::SUCCESS
         }
     }
 }

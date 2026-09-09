@@ -21,10 +21,13 @@ mod integrators;
 mod lattice;
 mod simulate;
 mod check;
+mod rdf;
+mod video;
 
 pub use check::{check_artifacts, print_report};
 pub use integrators::{advance, relative_energy_errors, Euler, Integrator, VelocityVerlet};
 pub use simulate::{run_simulation, RunParams};
+pub use video::write_video;
 pub use system::{
     compute_accelerations, kinetic_energy, potential_energy, total_energy, wrap_positions,
     Interaction, System,
