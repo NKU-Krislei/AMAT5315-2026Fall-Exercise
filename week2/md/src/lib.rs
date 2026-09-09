@@ -21,7 +21,8 @@ mod integrators;
 
 pub use integrators::{advance, relative_energy_errors, Euler, Integrator, VelocityVerlet};
 pub use system::{
-    compute_accelerations, kinetic_energy, potential_energy, total_energy, System,
+    compute_accelerations, kinetic_energy, potential_energy, total_energy, wrap_positions,
+    Interaction, System,
 };
 
 #[cfg(test)]
