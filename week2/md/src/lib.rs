@@ -2,9 +2,11 @@ pub fn greeting() -> &'static str {
     "Hello, world!"
 }
 
-/// Lennard-Jones pair energy \(U(r)\) in reduced units.
-pub fn energy(_r: f64) -> f64 {
-    unimplemented!("Lennard-Jones energy")
+/// Lennard-Jones pair energy \(U(r) = 4[r^{-12} - r^{-6}]\) in reduced units.
+pub fn energy(r: f64) -> f64 {
+    let r6 = r.powi(6);
+    let r12 = r6 * r6;
+    4.0 * (1.0 / r12 - 1.0 / r6)
 }
 
 /// Scalar pair force \(F(r) = -dU/dr\); positive means repulsion.
