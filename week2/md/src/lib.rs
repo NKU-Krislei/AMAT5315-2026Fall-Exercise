@@ -9,9 +9,11 @@ pub fn energy(r: f64) -> f64 {
     4.0 * (1.0 / r12 - 1.0 / r6)
 }
 
-/// Scalar pair force \(F(r) = -dU/dr\); positive means repulsion.
-pub fn force(_r: f64) -> f64 {
-    unimplemented!("Lennard-Jones force")
+/// Scalar pair force \(F(r) = 24/r [2r^{-12} - r^{-6}]\); positive means repulsion.
+pub fn force(r: f64) -> f64 {
+    let r6 = r.powi(6);
+    let r12 = r6 * r6;
+    (24.0 / r) * (2.0 / r12 - 1.0 / r6)
 }
 
 #[cfg(test)]
