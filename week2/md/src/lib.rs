@@ -18,8 +18,11 @@ pub fn force(r: f64) -> f64 {
 
 mod system;
 mod integrators;
+mod lattice;
+mod simulate;
 
 pub use integrators::{advance, relative_energy_errors, Euler, Integrator, VelocityVerlet};
+pub use simulate::{run_simulation, RunParams};
 pub use system::{
     compute_accelerations, kinetic_energy, potential_energy, total_energy, wrap_positions,
     Interaction, System,
