@@ -16,6 +16,14 @@ pub fn force(r: f64) -> f64 {
     (24.0 / r) * (2.0 / r12 - 1.0 / r6)
 }
 
+mod system;
+mod integrators;
+
+pub use integrators::{advance, relative_energy_errors, Euler, Integrator, VelocityVerlet};
+pub use system::{
+    compute_accelerations, kinetic_energy, potential_energy, total_energy, System,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
