@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use md::{run_simulation, RunParams};
+use md::{check_artifacts, print_report, run_simulation, RunParams};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -71,10 +71,20 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        Commands::Check { .. } => {
-            eprintln!("md check is not implemented yet");
-            ExitCode::FAILURE
-        }
+        Commands::Check { dir } => match check_artifacts(&dir) {
+            Ok(report) => {
+                print_report(&report);
+                if report.pass {
+                    ExitCode::SUCCESS
+                } else {
+                    ExitCode::FAILURE
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::FAILURE
+            }
+        },
         Commands::Video { .. } => {
             eprintln!("md video is not implemented yet");
             ExitCode::FAILURE

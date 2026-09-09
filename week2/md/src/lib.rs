@@ -20,7 +20,9 @@ mod system;
 mod integrators;
 mod lattice;
 mod simulate;
+mod check;
 
+pub use check::{check_artifacts, print_report};
 pub use integrators::{advance, relative_energy_errors, Euler, Integrator, VelocityVerlet};
 pub use simulate::{run_simulation, RunParams};
 pub use system::{

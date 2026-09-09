@@ -73,3 +73,22 @@ fn run_writes_run_json_and_traj_jsonl() {
     assert!(frames[0].get("E_pot").is_some());
     assert!(frames[0].get("E_kin").is_some());
 }
+
+#[test]
+fn contract_run_passes_physics() {
+    if cfg!(debug_assertions) {
+        eprintln!("skipping contract run in debug; cargo test --release runs it");
+        return;
+    }
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("contract");
+    let _ = fs::remove_dir_all(&out);
+    let exe = env!("CARGO_BIN_EXE_md");
+    let status = Command::new(exe)
+        .args(["run", "--out"])
+        .arg(&out)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let status = Command::new(exe).arg("check").arg(&out).status().unwrap();
+    assert!(status.success(), "md check should PASS on the contract run");
+}
