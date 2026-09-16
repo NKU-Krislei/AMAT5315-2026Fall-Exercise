@@ -31,6 +31,10 @@ enum Commands {
         seed: u64,
         #[arg(long, default_value = "artifacts")]
         out: PathBuf,
+        #[arg(long, default_value_t = md::ForceMode::Cells)]
+        force: md::ForceMode,
+        #[arg(long)]
+        ramp_to: Option<f64>,
     },
     Check {
         dir: PathBuf,
@@ -54,6 +58,8 @@ fn main() -> ExitCode {
             sample_every,
             seed,
             out,
+            force,
+            ramp_to,
         } => {
             let params = RunParams {
                 n,
@@ -64,6 +70,8 @@ fn main() -> ExitCode {
                 steps,
                 sample_every,
                 seed,
+                force,
+                ramp_to,
             };
             if let Err(e) = run_simulation(&params, &out) {
                 eprintln!("{e}");

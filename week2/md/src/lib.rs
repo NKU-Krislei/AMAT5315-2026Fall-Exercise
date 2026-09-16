@@ -30,7 +30,7 @@ pub use simulate::{run_simulation, RunParams};
 pub use video::write_video;
 pub use system::{
     compute_accelerations, kinetic_energy, potential_energy, total_energy, wrap_positions,
-    Interaction, System,
+    ForceMode, Interaction, System,
 };
 
 #[cfg(test)]

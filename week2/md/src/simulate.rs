@@ -1,7 +1,7 @@
 use crate::integrators::{advance, VelocityVerlet};
 use crate::lattice::{rescale_temperature, seed_maxwell_boltzmann, triangular_lattice};
 use crate::system::{
-    compute_accelerations, kinetic_energy, potential_energy, wrap_positions, System,
+    compute_accelerations, kinetic_energy, potential_energy, wrap_positions, ForceMode, System,
 };
 use serde::Serialize;
 use std::fs::{self, File};
@@ -21,6 +21,8 @@ pub struct RunParams {
     pub steps: usize,
     pub sample_every: usize,
     pub seed: u64,
+    pub force: ForceMode,
+    pub ramp_to: Option<f64>,
 }
 
 impl Default for RunParams {
@@ -34,6 +36,8 @@ impl Default for RunParams {
             steps: 10000,
             sample_every: 50,
             seed: 2026,
+            force: ForceMode::Cells,
+            ramp_to: None,
         }
     }
 }
@@ -51,6 +55,7 @@ struct RunJson {
     sample_every: usize,
     seed: u64,
     integrator: &'static str,
+    ramp_to: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -70,6 +75,7 @@ pub fn run_simulation(params: &RunParams, out_dir: &Path) -> Result<(), String> 
     let (positions, box_xy) = triangular_lattice(params.n, params.rho);
     let velocities = vec![[0.0, 0.0]; params.n];
     let mut system = System::periodic(positions, velocities, box_xy, RC);
+    system.force_mode = params.force;
     seed_maxwell_boltzmann(&mut system, params.temperature, params.seed);
     compute_accelerations(&mut system);
 
@@ -94,6 +100,7 @@ pub fn run_simulation(params: &RunParams, out_dir: &Path) -> Result<(), String> 
         sample_every: params.sample_every,
         seed: params.seed,
         integrator: "velocity-verlet",
+        ramp_to: params.ramp_to,
     };
     fs::write(
         out_dir.join("run.json"),
