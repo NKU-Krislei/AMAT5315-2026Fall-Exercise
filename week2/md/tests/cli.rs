@@ -92,3 +92,48 @@ fn contract_run_passes_physics() {
     let status = Command::new(exe).arg("check").arg(&out).status().unwrap();
     assert!(status.success(), "md check should PASS on the contract run");
 }
+
+#[test]
+fn ramp_to_is_recorded_and_last_temperature_matches_schedule() {
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("ramp");
+    let _ = fs::remove_dir_all(&out);
+    fs::create_dir_all(&out).unwrap();
+    let exe = env!("CARGO_BIN_EXE_md");
+    let status = Command::new(exe)
+        .args([
+            "run",
+            "--n",
+            "36",
+            "--temperature",
+            "0.2",
+            "--ramp-to",
+            "1.2",
+            "--eq-steps",
+            "50",
+            "--steps",
+            "50",
+            "--sample-every",
+            "50",
+            "--seed",
+            "2026",
+            "--out",
+        ])
+        .arg(&out)
+        .status()
+        .unwrap();
+    assert!(status.success(), "md run --ramp-to failed: {status}");
+
+    let run: Value =
+        serde_json::from_str(&fs::read_to_string(out.join("run.json")).unwrap()).unwrap();
+    assert_eq!(run["ramp_to"], 1.2);
+
+    let traj = fs::read_to_string(out.join("traj.jsonl")).unwrap();
+    let frame: Value = serde_json::from_str(traj.lines().next().unwrap()).unwrap();
+    let e_kin = frame["E_kin"].as_f64().unwrap();
+    let n = 36.0;
+    let t_thermo = 2.0 * e_kin / (2.0 * n - 2.0);
+    assert!(
+        (t_thermo - 1.2).abs() < 1e-9,
+        "last thermo T={t_thermo}, expected 1.2 after the final production rescale"
+    );
+}

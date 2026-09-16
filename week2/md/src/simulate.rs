@@ -10,6 +10,14 @@ use std::path::Path;
 
 pub const RC: f64 = 2.5;
 pub const EQ_RESCALE_EVERY: usize = 50;
+pub const PROD_RESCALE_EVERY: usize = 50;
+
+pub fn ramp_target(t0: f64, t1: f64, step: usize, n_steps: usize) -> f64 {
+    if n_steps == 0 {
+        return t1;
+    }
+    t0 + (t1 - t0) * (step as f64 / n_steps as f64)
+}
 
 #[derive(Clone, Debug)]
 pub struct RunParams {
@@ -113,6 +121,13 @@ pub fn run_simulation(params: &RunParams, out_dir: &Path) -> Result<(), String> 
     for step in 1..=params.steps {
         advance(&integrator, &mut system, params.dt);
         wrap_positions(&mut system);
+        if let Some(t1) = params.ramp_to {
+            if step % PROD_RESCALE_EVERY == 0 {
+                let t = ramp_target(params.temperature, t1, step, params.steps);
+                rescale_temperature(&mut system, t);
+                compute_accelerations(&mut system);
+            }
+        }
         if step % params.sample_every == 0 {
             let frame = Frame {
                 step,
