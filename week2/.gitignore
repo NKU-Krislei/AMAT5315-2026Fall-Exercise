@@ -1,2 +1,5 @@
 artifacts/
 *.mp4
+!cold.mp4
+!hot.mp4
+!fluid.mp4
