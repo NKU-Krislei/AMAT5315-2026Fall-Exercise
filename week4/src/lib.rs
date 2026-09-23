@@ -58,6 +58,21 @@ impl Integrator for Rk4 {
     }
 }
 
+/// One step of `y' = λ y`, returned as the growth of the length of `y`.
+///
+/// A complex `λ` is stored as the pair `(y_re, y_im)`. The result is what the
+/// stepper itself does, not the stability polynomial.
+pub fn growth_factor(method: &impl Integrator, lambda_re: f64, lambda_im: f64, h: f64) -> f64 {
+    let mut y = vec![1.0, 0.0];
+    method.step(&mut y, h, &|state: &[f64]| {
+        vec![
+            lambda_re * state[0] - lambda_im * state[1],
+            lambda_im * state[0] + lambda_re * state[1],
+        ]
+    });
+    y[0].hypot(y[1])
+}
+
 /// Integrate `dy/dt = rate(y)` from `y` at t = 0 to t = `t_end` with fixed step `h`.
 pub fn integrate<I, F>(method: &I, y: &mut [f64], h: f64, t_end: f64, rate: &F)
 where
@@ -116,5 +131,22 @@ mod tests {
         assert_order(&Euler, 1.0);
         assert_order(&Rk2, 2.0);
         assert_order(&Rk4, 4.0);
+    }
+
+    #[test]
+    fn euler_growth_on_the_test_equation_is_one_plus_z() {
+        let growth = growth_factor(&Euler, -0.5, 0.0, 1.0);
+        assert!((growth - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn shortest_traveling_wave_crosses_the_rk4_boundary() {
+        let k = 31.0;
+        let lambda_re = -0.05 * k * k;
+        let lambda_im = -k;
+        let inside = growth_factor(&Rk4, lambda_re, lambda_im, 0.045);
+        let outside = growth_factor(&Rk4, lambda_re, lambda_im, 0.056);
+        assert!(inside < 1.0, "inside {inside}");
+        assert!(outside > 1.0, "outside {outside}");
     }
 }

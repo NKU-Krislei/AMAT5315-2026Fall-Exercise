@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 rustfft = "6.4"
+
+[dev-dependencies]
+plotters = "0.3"
