@@ -3,6 +3,8 @@
 //! A step does not know what the state means. It only asks a rate function
 //! `F` for `dy/dt` at a few trial states and blends those slopes.
 
+pub mod line;
+
 pub trait Integrator {
     /// Advance `y` by one step of size `h`. `rate` is `F` in `dy/dt = F(y)`.
     fn step<F>(&self, y: &mut [f64], h: f64, rate: &F)
