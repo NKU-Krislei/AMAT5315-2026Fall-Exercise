@@ -1,0 +1,3 @@
+inputs/
+*.npy
+.DS_Store
