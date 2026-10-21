@@ -14,6 +14,7 @@ import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 
 from ddpm import ddpm_sample
+from ddim import ddim_sample, full_levels
 from mixture import CENTERS, cluster_statistics, sample_mixture
 from mlp import predict_noise
 from schedule import forward_chain, make_schedule
@@ -292,9 +293,135 @@ def make_ddpm_samples(n_samples: int = 2000, seed: int = 20262):
     _check_cluster_acceptance(rows)
 
 
+def _ddim_runner(schedule):
+    levels = full_levels(int(schedule.betas.shape[0]))
+
+    @jax.jit
+    def run(params, x_t):
+        def predict(state, level):
+            return predict_noise(params, state, level)
+
+        return ddim_sample(predict, schedule, x_t, levels, return_trace=True)
+
+    return run
+
+
+def _widths_ok(rows, low=0.29, high=0.32):
+    return all(low <= value <= high for row in rows for value in row["spread"])
+
+
+def make_ddim_comparison(n_samples: int = 2000, seed: int = 20271, n_paths: int = 8):
+    """Compare two DDIM runs with two DDPM runs that share the same starts."""
+    _prepare_dirs()
+    schedule = make_schedule()
+    params = load_params(ARTIFACTS / "diffusion" / "checkpoint_25000.npz")
+    ddim_run = _ddim_runner(schedule)
+    ddpm_run = _ddpm_runner(schedule)
+    key_start, key_noise_a, key_noise_b, key_target = jax.random.split(jax.random.PRNGKey(seed), 4)
+    x_t = jax.random.normal(key_start, (n_samples, 2), dtype=jnp.float32)
+    noise_a = jax.random.normal(key_noise_a, (1001, n_samples, 2), dtype=jnp.float32)
+    noise_b = jax.random.normal(key_noise_b, (1001, n_samples, 2), dtype=jnp.float32)
+
+    ddim_a, trace_ddim_a = ddim_run(params, x_t)
+    ddim_b, _trace_ddim_b = ddim_run(params, x_t)
+    ddpm_a, trace_ddpm_a = ddpm_run(params, x_t, noise_a)
+    ddpm_b, trace_ddpm_b = ddpm_run(params, x_t, noise_b)
+    ddim_a = np.asarray(ddim_a)
+    ddim_b = np.asarray(ddim_b)
+    ddpm_a = np.asarray(ddpm_a)
+    ddpm_b = np.asarray(ddpm_b)
+    difference = float(np.max(np.abs(ddim_a - ddim_b)))
+    print(f"largest difference between two DDIM runs: {difference}")
+
+    _labels_ddim, rows_ddim = cluster_statistics(ddim_a)
+    labels_ddpm_a, rows_ddpm_a = cluster_statistics(ddpm_a)
+    labels_ddpm_b, rows_ddpm_b = cluster_statistics(ddpm_b)
+    same_cluster = float(np.mean(labels_ddpm_a == labels_ddpm_b))
+    print(f"DDPM runs ending in the same cluster: {same_cluster:.4f}")
+    print("DDIM")
+    print(_format_cluster_report(rows_ddim))
+    print("DDPM A")
+    print(_format_cluster_report(rows_ddpm_a))
+    print("DDPM B")
+    print(_format_cluster_report(rows_ddpm_b))
+
+    target = np.asarray(sample_mixture(key_target, n_samples))
+    path_colors = plt.cm.tab10(np.linspace(0, 1, n_paths))
+    traces = {
+        "DDIM": np.asarray(trace_ddim_a),
+        "DDPM noise 1": np.asarray(trace_ddpm_a),
+        "DDPM noise 2": np.asarray(trace_ddpm_b),
+    }
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6), sharex=True, sharey=True)
+    for ax, (title, trace) in zip(axes, traces.items()):
+        for index in range(n_paths):
+            path = trace[:, index, :]
+            if title.startswith("DDPM"):
+                path = trace[::-1, index, :]
+            ax.plot(path[:, 0], path[:, 1], color=path_colors[index], linewidth=0.9, alpha=0.8)
+            ax.scatter(path[-1, 0], path[-1, 1], s=18, c=[path_colors[index]], zorder=3)
+        _draw_target_circles(ax)
+        ax.set_xlim(-CLUSTER_LIMIT, CLUSTER_LIMIT)
+        ax.set_ylim(-CLUSTER_LIMIT, CLUSTER_LIMIT)
+        ax.set_aspect("equal")
+        ax.set_title(title)
+    fig.suptitle("Same starts. DDIM has one path; DDPM changes with the reverse noise.")
+    fig.tight_layout()
+    trajectory_path = EVIDENCE / "part2_trajectories.png"
+    fig.savefig(trajectory_path, dpi=140)
+    plt.close(fig)
+
+    clouds = (
+        ("DDIM", ddim_a),
+        ("DDPM noise 1", ddpm_a),
+        ("DDPM noise 2", ddpm_b),
+        ("Exact target", target),
+    )
+    fig, axes = plt.subplots(1, 4, figsize=(12.5, 3.4), sharex=True, sharey=True)
+    for ax, (title, cloud) in zip(axes, clouds):
+        ax.scatter(cloud[:, 0], cloud[:, 1], s=3, c="0.2", linewidths=0, alpha=0.7)
+        _draw_target_circles(ax)
+        ax.set_xlim(-CLUSTER_LIMIT, CLUSTER_LIMIT)
+        ax.set_ylim(-CLUSTER_LIMIT, CLUSTER_LIMIT)
+        ax.set_aspect("equal")
+        ax.set_title(title)
+    fig.suptitle(f"2000 samples. Two DDIM runs differ by at most {difference:.1e}.")
+    fig.tight_layout()
+    sample_path = EVIDENCE / "part2_samples.png"
+    fig.savefig(sample_path, dpi=140)
+    plt.close(fig)
+
+    reference_width = _widths_ok(rows_ddim) and _widths_ok(rows_ddpm_a) and _widths_ok(rows_ddpm_b)
+    report = "\n".join(
+        [
+            f"largest DDIM difference: {difference}",
+            f"DDPM same-cluster fraction: {same_cluster:.4f}",
+            f"reference width band [0.29, 0.32] met: {reference_width}",
+            "DDIM",
+            _format_cluster_report(rows_ddim),
+            "DDPM A",
+            _format_cluster_report(rows_ddpm_a),
+            "DDPM B",
+            _format_cluster_report(rows_ddpm_b),
+        ]
+    )
+    (EVIDENCE / "part2_metrics.txt").write_text(report + "\n")
+    print(f"wrote {trajectory_path}")
+    print(f"wrote {sample_path}")
+    if difference != 0.0:
+        raise SystemExit("DDIM runs did not agree exactly")
+    # "Within 0.015" includes the boundary. Float division can land 1 ulp over it.
+    if any(abs(row["fraction"] - 0.25) > 0.015 + 1e-6 for row in rows_ddim):
+        raise SystemExit("DDIM cluster fractions are outside 0.015 of 0.25")
+    for name, rows in (("DDIM", rows_ddim), ("DDPM A", rows_ddpm_a), ("DDPM B", rows_ddpm_b)):
+        if any(np.max(np.abs(row["spread"] - 0.30)) > 0.03 for row in rows):
+            raise SystemExit(f"{name} widths are more than 0.03 from 0.30")
+    print(f"reference width band [0.29, 0.32] met: {reference_width}")
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["forward", "ddpm-fit", "ddpm-samples"])
+    parser.add_argument("command", choices=["forward", "ddpm-fit", "ddpm-samples", "ddim"])
     args = parser.parse_args()
     if args.command == "forward":
         make_forward_movie()
@@ -302,6 +429,8 @@ def main():
         make_ddpm_training_movie()
     elif args.command == "ddpm-samples":
         make_ddpm_samples()
+    elif args.command == "ddim":
+        make_ddim_comparison()
 
 
 if __name__ == "__main__":
