@@ -20,9 +20,10 @@ from flow import euler_sample, exact_velocity, time_grid
 from metrics import energy_distance, relative_rms
 from mixture import CENTERS, cluster_statistics, sample_mixture
 from mlp import predict_noise
+from repaint import repaint, repaint_levels
 from schedule import forward_chain, make_schedule
 from train_diffusion import load_params
-from unet import load_cifar_weights, sample_cifar_ddpm, to_display
+from unet import cifar_unet, load_cifar_weights, sample_cifar_ddpm, to_display
 
 ROOT = Path(__file__).resolve().parent
 EVIDENCE = ROOT / "evidence"
@@ -712,11 +713,84 @@ def make_cifar_photos():
     print(f"wrote {compare_path}")
 
 
+def make_repaint_figures():
+    """RePaint the central square of the four test images at four seeds."""
+    _prepare_dirs()
+    weights = load_cifar_weights()
+    schedule = make_schedule()
+    levels = repaint_levels()
+    images = np.load(ROOT / "inputs" / "images.npz")["test"]
+    seeds = (7201, 7202, 7203, 7204)
+    mask = np.ones((1, 3, 32, 32), dtype=np.float32)
+    mask[:, :, 6:26, 6:26] = 0.0
+
+    @jax.jit
+    def predict(state, level):
+        steps = jnp.full((state.shape[0],), level - 1)
+        return cifar_unet(state, steps, weights)
+
+    completions = []
+    lines = ["RePaint levels 1000,980,...,20,0; two attempts per jump except the last"]
+    for index, image in enumerate(images):
+        observation = mask * image.reshape(1, 3, 32, 32)
+        keys = jnp.stack([jax.random.PRNGKey(seed) for seed in seeds])
+        done = np.asarray(
+            repaint(predict, schedule, np.repeat(observation, 4, axis=0), jnp.repeat(mask, 4, axis=0), keys, levels)
+        )
+        completions.append(done)
+        for seed, completion in zip(seeds, done):
+            hidden_mse = float(np.mean((completion[:, 6:26, 6:26] - image[:, 6:26, 6:26]) ** 2))
+            difference = np.abs(completion - image)
+            difference[:, 6:26, 6:26] = 0.0
+            observed_change = float(difference.max())
+            lines.append(
+                f"image {index} seed {seed} hidden_mse {hidden_mse:.6f} observed_max_change {observed_change:.3e}"
+            )
+            if observed_change >= 1e-5:
+                raise SystemExit(f"observed pixels moved by {observed_change}")
+        print(f"inpainted image {index}", flush=True)
+    completions = np.stack(completions, axis=0)
+    repaint_dir = ARTIFACTS / "repaint"
+    repaint_dir.mkdir(parents=True, exist_ok=True)
+    np.save(repaint_dir / "completions.npy", completions)
+
+    columns = ["truth", "observation", "mean", "variance", *[f"seed {seed}" for seed in seeds]]
+    fig, axes = plt.subplots(4, len(columns), figsize=(1.45 * len(columns), 6.4), squeeze=False)
+    for row, image in enumerate(images):
+        observation = image.copy()
+        observation[:, 6:26, 6:26] = 0.0
+        mean = completions[row].mean(axis=0)
+        variance = completions[row].var(axis=0).mean(axis=0)
+        panels = [image, observation, mean, variance, *completions[row]]
+        for column, panel in enumerate(panels):
+            ax = axes[row, column]
+            if column == 3:
+                shown = ax.imshow(variance, cmap="magma", interpolation="nearest")
+                fig.colorbar(shown, ax=ax, fraction=0.046, pad=0.04)
+            else:
+                _show_cifar(ax, panel)
+            if row == 0:
+                ax.set_title(columns[column], fontsize=8)
+            if column >= 4:
+                hidden_mse = float(np.mean((panel[:, 6:26, 6:26] - image[:, 6:26, 6:26]) ** 2))
+                ax.set_xlabel(f"MSE {hidden_mse:.3f}", fontsize=8)
+        axes[row, 0].set_ylabel(f"image {row}", fontsize=8)
+    fig.suptitle("RePaint completions of the central 20x20 square", fontsize=12)
+    fig.tight_layout()
+    path = EVIDENCE / "part5_repaint.png"
+    fig.savefig(path, dpi=140)
+    plt.close(fig)
+    report = "\n".join(lines) + "\n"
+    (EVIDENCE / "part5_repaint.txt").write_text(report)
+    print(report)
+    print(f"wrote {path}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "command",
-        choices=["forward", "ddpm-fit", "ddpm-samples", "ddim", "velocity", "steps", "cifar"],
+        choices=["forward", "ddpm-fit", "ddpm-samples", "ddim", "velocity", "steps", "cifar", "repaint"],
     )
     args = parser.parse_args()
     if args.command == "forward":
@@ -733,6 +807,8 @@ def main():
         make_step_comparison()
     elif args.command == "cifar":
         make_cifar_photos()
+    elif args.command == "repaint":
+        make_repaint_figures()
 
 
 if __name__ == "__main__":

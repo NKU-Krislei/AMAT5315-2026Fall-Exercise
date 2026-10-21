@@ -1,0 +1,17 @@
+RePaint levels 1000,980,...,20,0; two attempts per jump except the last
+image 0 seed 7201 hidden_mse 0.178161 observed_max_change 0.000e+00
+image 0 seed 7202 hidden_mse 0.159051 observed_max_change 0.000e+00
+image 0 seed 7203 hidden_mse 0.124926 observed_max_change 0.000e+00
+image 0 seed 7204 hidden_mse 0.276036 observed_max_change 0.000e+00
+image 1 seed 7201 hidden_mse 0.299506 observed_max_change 0.000e+00
+image 1 seed 7202 hidden_mse 0.225716 observed_max_change 0.000e+00
+image 1 seed 7203 hidden_mse 0.213272 observed_max_change 0.000e+00
+image 1 seed 7204 hidden_mse 0.261223 observed_max_change 0.000e+00
+image 2 seed 7201 hidden_mse 0.149340 observed_max_change 0.000e+00
+image 2 seed 7202 hidden_mse 0.150039 observed_max_change 0.000e+00
+image 2 seed 7203 hidden_mse 0.088897 observed_max_change 0.000e+00
+image 2 seed 7204 hidden_mse 0.216729 observed_max_change 0.000e+00
+image 3 seed 7201 hidden_mse 0.301584 observed_max_change 0.000e+00
+image 3 seed 7202 hidden_mse 0.196291 observed_max_change 0.000e+00
+image 3 seed 7203 hidden_mse 0.155928 observed_max_change 0.000e+00
+image 3 seed 7204 hidden_mse 0.272816 observed_max_change 0.000e+00
