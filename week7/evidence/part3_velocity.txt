@@ -1,0 +1,3 @@
+s=0.1 relative RMS 0.009480 on 4000 marginal samples
+s=0.5 relative RMS 0.018722 on 4000 marginal samples
+s=0.9 relative RMS 0.051768 on 4000 marginal samples

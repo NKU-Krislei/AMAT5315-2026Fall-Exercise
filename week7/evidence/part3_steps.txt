@@ -1,0 +1,25 @@
+null 95% quantile: 0.001045
+fraction band: 0.013693
+DDPM 1: energy 0.813423, fraction 0.3005, width 1.0286
+DDPM 2: energy 0.685549, fraction 0.1168, width 0.2915
+DDPM 5: energy 0.027933, fraction 0.0112, width 0.1749
+DDPM 10: energy 0.007221, fraction 0.0135, width 0.0739
+DDPM 20: energy 0.001453, fraction 0.0100, width 0.0566
+DDPM 50: energy -0.000683, fraction 0.0050, width 0.0239
+DDPM 100: energy 0.000729, fraction 0.0142, width 0.0234
+DDPM 1000: energy -0.000860, fraction 0.0115, width 0.0137
+DDIM 1: energy 0.813415, fraction 0.3005, width 1.0286
+DDIM 2: energy 0.509814, fraction 0.0847, width 0.3115
+DDIM 5: energy 0.020605, fraction 0.0050, width 0.1313
+DDIM 10: energy 0.007159, fraction 0.0075, width 0.0215
+DDIM 20: energy 0.003391, fraction 0.0115, width 0.0327
+DDIM 50: energy 0.002428, fraction 0.0145, width 0.0206
+DDIM 100: energy 0.001966, fraction 0.0142, width 0.0195
+DDIM 1000: energy 0.002119, fraction 0.0142, width 0.0169
+flow 1: energy 2.153861, fraction 0.2112, width 0.2726
+flow 2: energy 0.183715, fraction 0.0212, width 0.3177
+flow 5: energy 0.022097, fraction 0.0103, width 0.0904
+flow 10: energy 0.007219, fraction 0.0170, width 0.0501
+flow 20: energy 0.003282, fraction 0.0172, width 0.0273
+flow 50: energy 0.001861, fraction 0.0162, width 0.0268
+flow 100: energy 0.001795, fraction 0.0160, width 0.0202
