@@ -22,6 +22,7 @@ from mixture import CENTERS, cluster_statistics, sample_mixture
 from mlp import predict_noise
 from schedule import forward_chain, make_schedule
 from train_diffusion import load_params
+from unet import load_cifar_weights, sample_cifar_ddpm, to_display
 
 ROOT = Path(__file__).resolve().parent
 EVIDENCE = ROOT / "evidence"
@@ -626,11 +627,96 @@ def make_step_comparison(n_samples: int = 4000, seed: int = 2031):
         raise SystemExit(f"flow width error at 20 steps is {flow_20['width_error']}")
 
 
+CIFAR_STAGES = (1000, 800, 600, 400, 200, 100, 40, 0)
+
+
+def _show_cifar(ax, image):
+    shown = np.transpose(to_display(image), (1, 2, 0))
+    ax.imshow(shown, interpolation="nearest")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def make_cifar_photos():
+    """Four 1000-step DDPM images, reverse stages, and real CIFAR-10 beside them."""
+    _prepare_dirs()
+    weights = load_cifar_weights()
+    schedule = make_schedule()
+    record = tuple(range(0, 1001, 20))
+    samples, frames = sample_cifar_ddpm(
+        weights,
+        schedule,
+        jax.random.PRNGKey(7041),
+        n_images=4,
+        record_levels=record,
+    )
+    cifar_dir = ARTIFACTS / "cifar"
+    cifar_dir.mkdir(parents=True, exist_ok=True)
+    np.save(cifar_dir / "samples.npy", samples)
+    np.savez(cifar_dir / "frames.npz", **{f"t{level:04d}": frames[level] for level in record})
+
+    stage_fig, stage_axes = plt.subplots(
+        4, len(CIFAR_STAGES), figsize=(1.35 * len(CIFAR_STAGES), 5.6), squeeze=False
+    )
+    for row in range(4):
+        for column, level in enumerate(CIFAR_STAGES):
+            _show_cifar(stage_axes[row, column], frames[level][row])
+            if row == 0:
+                stage_axes[row, column].set_title(f"t={level}", fontsize=9)
+    stage_fig.suptitle("CIFAR-10 DDPM reverse, unclipped, model index t-1", fontsize=11)
+    stage_fig.tight_layout()
+    stage_path = EVIDENCE / "part4_cifar_reverse.png"
+    stage_fig.savefig(stage_path, dpi=140)
+    plt.close(stage_fig)
+
+    ordered = [frames[level] for level in range(1000, -1, -20)]
+    movie = np.stack(ordered, axis=0)
+
+    def update(index):
+        for row in range(4):
+            _show_cifar(gif_axes[row], movie[index, row])
+        level = 1000 - 20 * index
+        gif_title.set_text(f"t = {level}")
+        return gif_axes
+
+    gif_fig, gif_axes = plt.subplots(1, 4, figsize=(6.4, 2.1))
+    gif_title = gif_fig.suptitle("t = 1000", fontsize=11)
+    animation = FuncAnimation(gif_fig, update, frames=movie.shape[0], blit=False)
+    gif_path = EVIDENCE / "part4_cifar_reverse.gif"
+    animation.save(gif_path, writer=PillowWriter(fps=8))
+    plt.close(gif_fig)
+
+    real = np.load(ROOT / "inputs" / "images.npz")["test"]
+    compare_fig, compare_axes = plt.subplots(2, 4, figsize=(6.4, 3.6))
+    for column in range(4):
+        _show_cifar(compare_axes[0, column], samples[column])
+        _show_cifar(compare_axes[1, column], real[column])
+        compare_axes[0, column].set_title(f"sample {column + 1}", fontsize=9)
+    compare_axes[0, 0].set_ylabel("DDPM", fontsize=9)
+    compare_axes[1, 0].set_ylabel("CIFAR-10", fontsize=9)
+    compare_fig.suptitle("Generated images beside real CIFAR-10 test images", fontsize=11)
+    compare_fig.tight_layout()
+    compare_path = EVIDENCE / "part4_cifar_compare.png"
+    compare_fig.savefig(compare_path, dpi=140)
+    plt.close(compare_fig)
+
+    note = (
+        "seed 7041, four images, 1000-step DDPM, variance beta_t, no clip during sampling\n"
+        "model index is the mathematical level minus 1\n"
+        "weights google/ddpm-cifar10-32 revision 267b167dc01f0e4e61923ea244e8b988f84deb80\n"
+        "real images are the four test arrays in week7-images.npz; week6 has no gallery script\n"
+    )
+    (EVIDENCE / "part4_cifar.txt").write_text(note)
+    print(f"wrote {stage_path}")
+    print(f"wrote {gif_path}")
+    print(f"wrote {compare_path}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "command",
-        choices=["forward", "ddpm-fit", "ddpm-samples", "ddim", "velocity", "steps"],
+        choices=["forward", "ddpm-fit", "ddpm-samples", "ddim", "velocity", "steps", "cifar"],
     )
     args = parser.parse_args()
     if args.command == "forward":
@@ -645,6 +731,8 @@ def main():
         make_velocity_fields()
     elif args.command == "steps":
         make_step_comparison()
+    elif args.command == "cifar":
+        make_cifar_photos()
 
 
 if __name__ == "__main__":
