@@ -1,0 +1,4 @@
+cluster 0: fraction 0.2630  centre (3.0043, 0.0093)  spread (0.2952, 0.2933)
+cluster 1: fraction 0.2525  centre (0.0204, 2.9806)  spread (0.3088, 0.3168)
+cluster 2: fraction 0.2390  centre (-2.9957, 0.0040)  spread (0.3038, 0.2999)
+cluster 3: fraction 0.2455  centre (0.0028, -2.9785)  spread (0.2958, 0.2968)

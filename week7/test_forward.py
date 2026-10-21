@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from mixture import CENTERS, sample_mixture
+from mixture import CENTERS, cluster_statistics, sample_mixture
 from schedule import add_noise, forward_chain, forward_step, make_schedule
 
 ROOT = Path(__file__).resolve().parent
@@ -93,3 +93,13 @@ def test_mixture_has_equal_populations_centres_and_width():
         assert abs(fraction - 0.25) < 0.02
         np.testing.assert_allclose(group.mean(axis=0), centre, atol=0.03)
         np.testing.assert_allclose(group.std(axis=0), 0.3, atol=0.02)
+
+
+def test_nearest_centre_statistics_match_the_sampled_components():
+    points, components = sample_mixture(jax.random.PRNGKey(11), 20_000, return_components=True)
+    labels, rows = cluster_statistics(points)
+    assert np.mean(labels == np.asarray(components)) > 0.99
+    for row, centre in zip(rows, np.asarray(CENTERS)):
+        assert abs(row["fraction"] - 0.25) < 0.02
+        np.testing.assert_allclose(row["centre"], centre, atol=0.03)
+        np.testing.assert_allclose(row["spread"], 0.3, atol=0.02)
