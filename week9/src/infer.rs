@@ -21,7 +21,12 @@ pub fn enumerate(model: &Model, evidence: &[(usize, usize)]) -> Posterior {
     let mut assignment = vec![0usize; n];
     let mut mass = 0.0;
     let mut marginals: Vec<Vec<f64>> = model.dims.iter().map(|&dim| vec![0.0; dim]).collect();
-    let mut joint_tl = vec![vec![0.0; model.dims[3]]; model.dims[1]];
+    let track_joint = n > 3;
+    let mut joint_tl = if track_joint {
+        vec![vec![0.0; model.dims[3]]; model.dims[1]]
+    } else {
+        Vec::new()
+    };
 
     loop {
         let agrees = assignment
@@ -34,7 +39,9 @@ pub fn enumerate(model: &Model, evidence: &[(usize, usize)]) -> Posterior {
             for (var, &state) in assignment.iter().enumerate() {
                 marginals[var][state] += weight;
             }
-            joint_tl[assignment[1]][assignment[3]] += weight;
+            if track_joint {
+                joint_tl[assignment[1]][assignment[3]] += weight;
+            }
         }
         if !advance(&mut assignment, &model.dims) {
             break;

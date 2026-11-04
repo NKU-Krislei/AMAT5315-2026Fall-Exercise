@@ -44,3 +44,20 @@ conda run -n modernSC python plot_orders.py
 
 Both orders give `p(A=0, D=0) = 0.004501375`, within relative error `1e-10` of enumeration. Replaying the greedy plan reproduces that mass. Analysis recounts the random plan without contracting it. This seed-42 random tree has work 248 and a largest tensor of 32 entries, with labels E, L, A, B, S. The greedy tree has work 54 and a largest tensor of 8 entries, which is the input `p(E|T,L)`; its largest intermediate has 4 entries, labels E, L. `evidence/orders.png` draws both trees and marks those intermediates. Another random generator can produce a different tree; the saved plans are the ones being counted.
 
+## Loopy belief propagation
+
+Observations are written into the factor tables before the updates. Messages start uniform. Each sweep reads the current messages and writes a normalized proposal for every directed edge; the residual is the largest absolute change in that undamped proposal, including the returned state. The stored messages are then damped by 0.5. Beliefs multiply every incoming factor-to-variable message and omit none of them. Update work counts variable-to-factor products and one visit per factor entry in each factor-to-variable message.
+
+```bash
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence prior --method bp \
+  --damping 0.5 --tolerance 1e-10 --max-sweeps 1000 --out artifacts/bp-prior
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence AD --method bp \
+  --damping 0.5 --tolerance 1e-10 --max-sweeps 1000 --out artifacts/bp-AD
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence ADX --method bp \
+  --damping 0.5 --tolerance 1e-10 --max-sweeps 1000 --out artifacts/bp-ADX
+conda run -n modernSC python plot_bp.py
+```
+
+These directories do not replace `artifacts/prior`, `artifacts/AD`, or `artifacts/ADX`. ADX stops at sweep 94 with undamped residual `8.225e-11` and maximum marginal error `0.010612`. The messages have stopped; the disease probabilities have not matched enumeration. `evidence/bp.png` shows that gap for prior, AD, and ADX. A chain factor graph, checked in `tests/bp.rs`, matches enumeration, so the ADX gap is the loop rather than a message that includes its recipient.
+
+

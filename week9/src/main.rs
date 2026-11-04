@@ -4,9 +4,9 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use infer::{
-    ad_tuberculosis_diagram, compare, comparison_json, comparison_text, enumerate, execute_scalar,
-    format_checks, matrix_and_ising, parse_evidence, query_inputs, recount_plan, scalar_plan,
-    Model, OrderChoice, ScalarPlan,
+    ad_tuberculosis_diagram, belief_propagation, compare, comparison_json, comparison_text,
+    enumerate, execute_scalar, format_checks, matrix_and_ising, parse_evidence, query_inputs,
+    recount_plan, scalar_plan, BpSettings, Model, OrderChoice, ScalarPlan,
 };
 
 fn main() -> ExitCode {
@@ -60,11 +60,22 @@ fn run(args: &[String]) -> Result<String, String> {
 
 fn infer_case(args: &[String]) -> Result<String, String> {
     let flags = flags(args)?;
+    match flags.get("method").map(String::as_str) {
+        Some("bp") => return bp_case(&flags),
+        Some("exact") | None => {}
+        Some(other) => return Err(format!("unknown method {other}; expected exact or bp")),
+    }
+    if ["damping", "tolerance", "max-sweeps"]
+        .iter()
+        .any(|name| flags.contains_key(*name))
+    {
+        return Err("damping, tolerance and max-sweeps are required with bp only".to_string());
+    }
     let ordering = ["order", "seed", "plan", "analyze"]
         .iter()
         .any(|name| flags.contains_key(*name));
     if !ordering {
-        reject_unknown(&flags, &["model", "evidence", "out"])?;
+        reject_unknown(&flags, &["model", "evidence", "out", "method"])?;
         let model = Model::load(Path::new(required(&flags, "model")?))?;
         let label = required(&flags, "evidence")?;
         let out = Path::new(required(&flags, "out")?);
@@ -78,7 +89,7 @@ fn infer_case(args: &[String]) -> Result<String, String> {
     reject_unknown(
         &flags,
         &[
-            "model", "evidence", "out", "order", "seed", "plan", "analyze",
+            "model", "evidence", "out", "method", "order", "seed", "plan", "analyze",
         ],
     )?;
     let modes = ["order", "plan", "analyze"]
@@ -178,6 +189,108 @@ fn infer_case(args: &[String]) -> Result<String, String> {
         cost.largest_intermediate.entries,
         label_list(&cost.largest_intermediate.retained)
     ))
+}
+
+fn bp_case(flags: &std::collections::BTreeMap<String, String>) -> Result<String, String> {
+    reject_unknown(
+        flags,
+        &[
+            "model",
+            "evidence",
+            "out",
+            "method",
+            "damping",
+            "tolerance",
+            "max-sweeps",
+        ],
+    )?;
+    let model = Model::load(Path::new(required(flags, "model")?))?;
+    let label = required(flags, "evidence")?;
+    let evidence = parse_evidence(label)?;
+    let settings = BpSettings {
+        damping: required(flags, "damping")?
+            .parse()
+            .map_err(|err| format!("damping: {err}"))?,
+        tolerance: required(flags, "tolerance")?
+            .parse()
+            .map_err(|err| format!("tolerance: {err}"))?,
+        max_sweeps: required(flags, "max-sweeps")?
+            .parse()
+            .map_err(|err| format!("max-sweeps: {err}"))?,
+    };
+    let out = Path::new(required(flags, "out")?);
+    fs::create_dir_all(out).map_err(|err| err.to_string())?;
+    let exact = enumerate(&model, &evidence);
+    let result = belief_propagation(&model, &evidence, settings)?;
+    let history: Vec<serde_json::Value> = result
+        .sweeps
+        .iter()
+        .enumerate()
+        .map(|(index, sweep)| {
+            serde_json::json!({
+                "sweep": index + 1,
+                "residual": sweep.residual,
+                "cumulative_work": sweep.cumulative_work,
+                "marginal_error": max_marginal_error(&exact.marginals, &sweep.beliefs),
+                "beliefs": named_beliefs(&sweep.beliefs),
+            })
+        })
+        .collect();
+    let report = serde_json::json!({
+        "evidence": label,
+        "observations": evidence.iter().map(|(id, state)| serde_json::json!({
+            "id": id,
+            "name": label_name(*id),
+            "state": state,
+        })).collect::<Vec<_>>(),
+        "method": "bp",
+        "damping": settings.damping,
+        "tolerance": settings.tolerance,
+        "max_sweeps": settings.max_sweeps,
+        "converged": result.converged,
+        "residual": result.residual,
+        "cumulative_work": result.cumulative_work,
+        "marginal_error": max_marginal_error(&exact.marginals, &result.beliefs),
+        "node_marginals": {
+            "bp": named_beliefs(&result.beliefs),
+            "enumeration": named_beliefs(&exact.marginals),
+        },
+        "history": history,
+    });
+    write_json(&out.join("run.json"), &report)?;
+    let mut text = String::new();
+    for (index, sweep) in result.sweeps.iter().enumerate() {
+        text.push_str(&format!(
+            "sweep {} residual {:.3e} work {}\n",
+            index + 1,
+            sweep.residual,
+            sweep.cumulative_work
+        ));
+    }
+    text.push_str(&format!(
+        "converged {} residual {:.3e} marginal_error {:.6}\n",
+        result.converged,
+        result.residual,
+        max_marginal_error(&exact.marginals, &result.beliefs)
+    ));
+    Ok(text)
+}
+
+fn named_beliefs(beliefs: &[Vec<f64>]) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    for (id, belief) in beliefs.iter().enumerate() {
+        object.insert(label_name(id).to_string(), serde_json::json!(belief));
+    }
+    serde_json::Value::Object(object)
+}
+
+fn max_marginal_error(exact: &[Vec<f64>], beliefs: &[Vec<f64>]) -> f64 {
+    exact
+        .iter()
+        .zip(beliefs)
+        .flat_map(|(left, right)| left.iter().zip(right))
+        .map(|(left, right)| (left - right).abs())
+        .fold(0.0, f64::max)
 }
 
 fn read_plan(path: &str) -> Result<ScalarPlan, String> {

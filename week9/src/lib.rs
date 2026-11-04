@@ -1,5 +1,6 @@
 //! Probabilistic inference from local factor tables.
 
+mod bp;
 mod checks;
 mod diagram;
 mod infer;
@@ -7,6 +8,7 @@ mod model;
 mod order;
 mod report;
 
+pub use bp::{belief_propagation, BpResult, BpSettings, BpSweep};
 pub use checks::{format_checks, matrix_and_ising, NumericChecks};
 pub use diagram::ad_tuberculosis_diagram;
 pub use infer::{contract, enumerate, Posterior};

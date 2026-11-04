@@ -27,3 +27,20 @@ Include per-step costs and retained labels for independent recounting.
 """
 # order, plan and analyze are mutually exclusive.
 # Analysis writes costs without inference; inference also saves its scalar plan.
+
+[args.bp]
+method     = "inference method: exact or bp; default exact"
+damping    = "fraction of the proposed message used; required with bp only"
+tolerance  = "maximum undamped residual for stopping; required with bp only"
+max-sweeps = "iteration limit, not a convergence claim; required with bp only"
+
+[writes.bp]
+# Estimate probabilities for the same model and observations as exact inference.
+# Record enough history to compare BP's convergence, accuracy and cost.
+"<out>/run.json" = """
+Observations, BP settings and final marginals.
+At each sweep: node beliefs, undamped residual and cumulative update work.
+Normalize every message proposal. Compute the maximum absolute undamped message
+change at the same state as the recorded beliefs, including the returned state.
+"""
+stdout           = "BP sweep, undamped residual and cumulative update work"
