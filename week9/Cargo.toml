@@ -1,0 +1,17 @@
+[package]
+name = "infer"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.96"
+description = "Infer probabilities from local factors by enumeration and tensor contraction"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tenferro-cpu = { version = "=0.9.0", default-features = false, features = ["native"] }
+tenferro-einsum = { version = "=0.9.0", default-features = false, features = ["native"] }
+tenferro-tensor = { version = "=0.9.0", default-features = false }
+
+[profile.release]
+lto = false
+codegen-units = 1

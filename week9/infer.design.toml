@@ -1,0 +1,12 @@
+usage       = "infer --model asia.uai --evidence AD --out artifacts/AD"
+description = "infer probabilities from local factors; no unstated defaults"
+
+[args]
+model    = "path to the ASIA UAI model data"
+evidence = "prior: no observations; AD: A=0,D=0; ADX: A=0,D=0,X=0"
+out      = "directory for this run's evidence"
+
+[writes]
+# Keep enumeration and contraction results at full precision for comparison.
+"<out>/run.json" = "observations, evidence mass, node marginals and T,L joint"
+stdout           = "evidence probability, disease probabilities and discrepancies"
