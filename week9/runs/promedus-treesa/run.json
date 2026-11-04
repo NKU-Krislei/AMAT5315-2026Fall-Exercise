@@ -1,0 +1,114 @@
+{
+  "elapsed_seconds": 1.1349249590000001,
+  "largest_intermediate_entries": 131072,
+  "largest_intermediate_labels": [
+    53,
+    67,
+    174,
+    350,
+    289,
+    259,
+    245,
+    167,
+    191,
+    227,
+    43,
+    59,
+    124,
+    127,
+    12,
+    139,
+    204
+  ],
+  "largest_tensor": 131072,
+  "log10_partition": -7.8067463045824335,
+  "log10_partition_abs_error": 3.6954175666181754e-6,
+  "method": "treesa",
+  "observations": [
+    {
+      "id": 41,
+      "state": 1
+    },
+    {
+      "id": 47,
+      "state": 1
+    },
+    {
+      "id": 26,
+      "state": 1
+    },
+    {
+      "id": 29,
+      "state": 1
+    },
+    {
+      "id": 28,
+      "state": 1
+    },
+    {
+      "id": 14,
+      "state": 1
+    },
+    {
+      "id": 123,
+      "state": 1
+    },
+    {
+      "id": 4,
+      "state": 1
+    },
+    {
+      "id": 147,
+      "state": 1
+    }
+  ],
+  "published_log10_partition": -7.80675,
+  "queries": [
+    {
+      "abs_error": 2.581889747554911e-7,
+      "id": 59,
+      "marginal": [
+        0.8024117418110253,
+        0.1975882581889747
+      ],
+      "published": [
+        0.802412,
+        0.197588
+      ]
+    },
+    {
+      "abs_error": 4.32319190724062e-7,
+      "id": 102,
+      "marginal": [
+        0.8502465676808093,
+        0.14975343231919072
+      ],
+      "published": [
+        0.850247,
+        0.149753
+      ]
+    },
+    {
+      "abs_error": 1.8380890420832685e-8,
+      "id": 139,
+      "marginal": [
+        0.38247798161910956,
+        0.6175220183808904
+      ],
+      "published": [
+        0.382478,
+        0.617522
+      ]
+    }
+  ],
+  "treesa": {
+    "beta_first": 0.16,
+    "beta_last": 15.01,
+    "betas": 100,
+    "niters": 20,
+    "ntrials": 1,
+    "score": "time",
+    "seed": "trial_idx+42"
+  },
+  "work": 10523488
+}

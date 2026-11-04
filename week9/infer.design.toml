@@ -44,3 +44,20 @@ Normalize every message proposal. Compute the maximum absolute undamped message
 change at the same state as the recorded beliefs, including the returned state.
 """
 stdout           = "BP sweep, undamped residual and cumulative update work"
+
+[args.evidence_file]
+evidence-file = "one UAI evidence instance: a count, then variable/state pairs"
+queries       = "comma-separated free variable ids whose marginals are returned"
+pr            = "published log10 evidence partition"
+mar           = "published state-ordered marginals"
+order         = "greedy or treesa; required unless method is bp"
+method        = "exact or bp; exact reads --order, bp reads the BP settings"
+
+[writes.evidence_file]
+# Condition the evidence into the tables, keep scalar factors, and retain log scales.
+"<out>/run.json" = """
+For an exact order: log10 partition, query marginals, published absolute errors,
+recounted work and the largest intermediate.
+For bp: convergence flag, residual, query beliefs and the per-sweep residual,
+query error and cumulative update work.
+"""
