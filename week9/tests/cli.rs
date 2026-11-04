@@ -59,3 +59,98 @@ fn checks_print_the_answer_key() {
     assert!(stdout.contains("12"));
     assert!(stdout.contains("12.60256209895193"));
 }
+
+#[test]
+fn order_commands_replay_the_same_evidence_mass() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let base = root.join("target").join("order-flow");
+    let _ = std::fs::remove_dir_all(&base);
+    let model = root.join("asia.uai");
+    let random = base.join("random");
+    let greedy = base.join("greedy");
+    let analysis = base.join("analysis");
+    let replay = base.join("replay");
+    let random_run = infer()
+        .arg("--model")
+        .arg(&model)
+        .arg("--evidence")
+        .arg("AD")
+        .arg("--order")
+        .arg("random")
+        .arg("--seed")
+        .arg("42")
+        .arg("--out")
+        .arg(&random)
+        .output()
+        .expect("random");
+    assert!(
+        random_run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&random_run.stderr)
+    );
+    let greedy_run = infer()
+        .arg("--model")
+        .arg(&model)
+        .arg("--evidence")
+        .arg("AD")
+        .arg("--order")
+        .arg("greedy")
+        .arg("--out")
+        .arg(&greedy)
+        .output()
+        .expect("greedy");
+    assert!(
+        greedy_run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&greedy_run.stderr)
+    );
+    let analyze = infer()
+        .arg("--model")
+        .arg(&model)
+        .arg("--evidence")
+        .arg("AD")
+        .arg("--analyze")
+        .arg(random.join("order.json"))
+        .arg("--out")
+        .arg(&analysis)
+        .output()
+        .expect("analyze");
+    assert!(
+        analyze.status.success(),
+        "{}",
+        String::from_utf8_lossy(&analyze.stderr)
+    );
+    assert!(!analysis.join("run.json").exists());
+    let replay_run = infer()
+        .arg("--model")
+        .arg(&model)
+        .arg("--evidence")
+        .arg("AD")
+        .arg("--plan")
+        .arg(greedy.join("order.json"))
+        .arg("--out")
+        .arg(&replay)
+        .output()
+        .expect("replay");
+    assert!(
+        replay_run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&replay_run.stderr)
+    );
+    let replay_text = String::from_utf8(replay_run.stdout).expect("utf8");
+    assert!(replay_text.contains("0.004501375"), "{replay_text}");
+    let both = infer()
+        .arg("--model")
+        .arg(&model)
+        .arg("--evidence")
+        .arg("AD")
+        .arg("--order")
+        .arg("greedy")
+        .arg("--analyze")
+        .arg(random.join("order.json"))
+        .arg("--out")
+        .arg(base.join("both"))
+        .output()
+        .expect("exclusive");
+    assert!(!both.status.success());
+}

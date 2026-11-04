@@ -1,0 +1,41 @@
+{
+  "evidence": "AD",
+  "evidence_mass": {
+    "enumeration": 0.004501374999999999,
+    "plan": 0.004501374999999999
+  },
+  "largest_intermediate": {
+    "entries": 32,
+    "labels": [
+      "E",
+      "L",
+      "A",
+      "B",
+      "S"
+    ],
+    "retained": [
+      5,
+      3,
+      0,
+      4,
+      2
+    ]
+  },
+  "largest_tensor": 32,
+  "method": "random",
+  "observations": [
+    {
+      "id": 0,
+      "name": "A",
+      "state": 0
+    },
+    {
+      "id": 7,
+      "name": "D",
+      "state": 0
+    }
+  ],
+  "relative_evidence_mass_error": 0.0,
+  "seed": 42,
+  "work": 248
+}

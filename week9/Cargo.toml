@@ -12,6 +12,12 @@ tenferro-cpu = { version = "=0.9.0", default-features = false, features = ["nati
 tenferro-einsum = { version = "=0.9.0", default-features = false, features = ["native"] }
 tenferro-tensor = { version = "=0.9.0", default-features = false }
 
+[dependencies.omeco]
+version = "=0.2.6"
+
+[dependencies.rand]
+version = "0.9"
+
 [profile.release]
 lto = false
 codegen-units = 1

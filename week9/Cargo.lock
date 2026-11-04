@@ -365,6 +365,8 @@ dependencies = [
 name = "infer"
 version = "0.1.0"
 dependencies = [
+ "omeco",
+ "rand",
  "serde",
  "serde_json",
  "tenferro-cpu",

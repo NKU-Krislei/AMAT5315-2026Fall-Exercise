@@ -1,0 +1,112 @@
+{
+  "method": "random",
+  "seed": 42,
+  "inputs": [
+    [
+      0
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      5,
+      3,
+      1
+    ],
+    [
+      6,
+      5
+    ],
+    [
+      7,
+      5,
+      4
+    ],
+    [
+      0
+    ],
+    [
+      7
+    ]
+  ],
+  "output": [],
+  "tree": {
+    "kind": "join",
+    "left": {
+      "kind": "join",
+      "left": {
+        "kind": "join",
+        "left": {
+          "kind": "join",
+          "left": {
+            "kind": "join",
+            "left": {
+              "kind": "leaf",
+              "tensor": 7
+            },
+            "right": {
+              "kind": "leaf",
+              "tensor": 3
+            }
+          },
+          "right": {
+            "kind": "leaf",
+            "tensor": 6
+          }
+        },
+        "right": {
+          "kind": "leaf",
+          "tensor": 9
+        }
+      },
+      "right": {
+        "kind": "leaf",
+        "tensor": 2
+      }
+    },
+    "right": {
+      "kind": "join",
+      "left": {
+        "kind": "join",
+        "left": {
+          "kind": "join",
+          "left": {
+            "kind": "join",
+            "left": {
+              "kind": "leaf",
+              "tensor": 5
+            },
+            "right": {
+              "kind": "leaf",
+              "tensor": 1
+            }
+          },
+          "right": {
+            "kind": "leaf",
+            "tensor": 8
+          }
+        },
+        "right": {
+          "kind": "leaf",
+          "tensor": 4
+        }
+      },
+      "right": {
+        "kind": "leaf",
+        "tensor": 0
+      }
+    }
+  }
+}

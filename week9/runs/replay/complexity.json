@@ -1,0 +1,126 @@
+{
+  "work": 54,
+  "largest_tensor": 8,
+  "largest_intermediate": {
+    "union": [
+      5,
+      4,
+      3
+    ],
+    "retained": [
+      5,
+      3
+    ],
+    "cost": 8,
+    "entries": 4
+  },
+  "steps": [
+    {
+      "union": [
+        0
+      ],
+      "retained": [
+        0
+      ],
+      "cost": 2,
+      "entries": 2
+    },
+    {
+      "union": [
+        1,
+        0
+      ],
+      "retained": [
+        1
+      ],
+      "cost": 4,
+      "entries": 2
+    },
+    {
+      "union": [
+        5,
+        3,
+        1
+      ],
+      "retained": [
+        5,
+        3
+      ],
+      "cost": 8,
+      "entries": 4
+    },
+    {
+      "union": [
+        7,
+        5,
+        4
+      ],
+      "retained": [
+        5,
+        4
+      ],
+      "cost": 8,
+      "entries": 4
+    },
+    {
+      "union": [
+        6,
+        5,
+        4
+      ],
+      "retained": [
+        5,
+        4
+      ],
+      "cost": 8,
+      "entries": 4
+    },
+    {
+      "union": [
+        2,
+        4
+      ],
+      "retained": [
+        2,
+        4
+      ],
+      "cost": 4,
+      "entries": 4
+    },
+    {
+      "union": [
+        3,
+        2,
+        4
+      ],
+      "retained": [
+        3,
+        4
+      ],
+      "cost": 8,
+      "entries": 4
+    },
+    {
+      "union": [
+        5,
+        4,
+        3
+      ],
+      "retained": [
+        5,
+        3
+      ],
+      "cost": 8,
+      "entries": 4
+    },
+    {
+      "union": [
+        5,
+        3
+      ],
+      "retained": [],
+      "cost": 4,
+      "entries": 1
+    }
+  ]
+}

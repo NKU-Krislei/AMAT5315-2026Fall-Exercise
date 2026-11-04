@@ -10,3 +10,20 @@ out      = "directory for this run's evidence"
 # Keep enumeration and contraction results at full precision for comparison.
 "<out>/run.json" = "observations, evidence mass, node marginals and T,L joint"
 stdout           = "evidence probability, disease probabilities and discrepancies"
+
+[args.ordering]
+order   = "scalar evidence order: random or greedy; default greedy"
+seed    = "random-order seed; required with random, absent otherwise"
+plan    = "replay a saved scalar-query plan; default absent"
+analyze = "analyse a saved plan without contraction; default absent"
+
+[writes.ordering]
+# Save enough information to replay the plan and independently recount its cost.
+"<out>/order.json"      = "contraction plan, planning method and random seed"
+"<out>/complexity.json" = """
+Work: sum of pair costs, each the product of dimensions in the union of input labels.
+Largest tensor: maximum entry count among all inputs and intermediates.
+Include per-step costs and retained labels for independent recounting.
+"""
+# order, plan and analyze are mutually exclusive.
+# Analysis writes costs without inference; inference also saves its scalar plan.

@@ -29,3 +29,18 @@ Enumeration and contraction agree within absolute marginal error `1e-10` and rel
 `evidence/checks.txt` records `AB` in column-major order `[4, 10, 4, 8]`, `tr(AB) = 12`, and the three-spin Ising ring `Z = 12.60256209895193` at `beta = 0.5`, `J = 1`, spins `±1`, no external field. The contraction and the eight-configuration sum differ by less than `1e-12`.
 
 `evidence/graphs.svg` is the AD tuberculosis query. Each factor is labeled with its UAI axes. Smoking is one shared index of `p(S)`, `p(L|S)`, and `p(B|S)`. `A` and `D` are fixed at 0, `X` is summed, and only `T` stays open.
+
+## Contraction order
+
+The scalar AD query keeps the factor tables intact and attaches one-hot caps for `A=0` and `D=0`. Random pairings use a seeded generator. Greedy pairings use omeco `GreedyMethod`. Costs are recounted from the saved tree: a step's work is the product of the dimensions in the union of its two inputs, and the largest tensor is the biggest input or intermediate.
+
+```bash
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence AD --order random --seed 42 --out runs/random
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence AD --order greedy --out runs/greedy
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence AD --analyze runs/random/order.json --out runs/analysis
+cargo +1.96.0 run --quiet -- --model asia.uai --evidence AD --plan runs/greedy/order.json --out runs/replay
+conda run -n modernSC python plot_orders.py
+```
+
+Both orders give `p(A=0, D=0) = 0.004501375`, within relative error `1e-10` of enumeration. Replaying the greedy plan reproduces that mass. Analysis recounts the random plan without contracting it. This seed-42 random tree has work 248 and a largest tensor of 32 entries, with labels E, L, A, B, S. The greedy tree has work 54 and a largest tensor of 8 entries, which is the input `p(E|T,L)`; its largest intermediate has 4 entries, labels E, L. `evidence/orders.png` draws both trees and marks those intermediates. Another random generator can produce a different tree; the saved plans are the ones being counted.
+

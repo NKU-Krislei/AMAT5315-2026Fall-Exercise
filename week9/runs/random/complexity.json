@@ -1,0 +1,169 @@
+{
+  "work": 248,
+  "largest_tensor": 32,
+  "largest_intermediate": {
+    "union": [
+      5,
+      3,
+      0,
+      4,
+      2
+    ],
+    "retained": [
+      5,
+      3,
+      0,
+      4,
+      2
+    ],
+    "cost": 32,
+    "entries": 32
+  },
+  "steps": [
+    {
+      "union": [
+        7,
+        5,
+        4,
+        3,
+        2
+      ],
+      "retained": [
+        7,
+        5,
+        4,
+        3,
+        2
+      ],
+      "cost": 32,
+      "entries": 32
+    },
+    {
+      "union": [
+        7,
+        5,
+        4,
+        3,
+        2,
+        6
+      ],
+      "retained": [
+        7,
+        5,
+        4,
+        3,
+        2
+      ],
+      "cost": 64,
+      "entries": 32
+    },
+    {
+      "union": [
+        7,
+        5,
+        4,
+        3,
+        2
+      ],
+      "retained": [
+        5,
+        4,
+        3,
+        2
+      ],
+      "cost": 32,
+      "entries": 16
+    },
+    {
+      "union": [
+        5,
+        4,
+        3,
+        2
+      ],
+      "retained": [
+        5,
+        4,
+        3,
+        2
+      ],
+      "cost": 16,
+      "entries": 16
+    },
+    {
+      "union": [
+        5,
+        3,
+        1,
+        0
+      ],
+      "retained": [
+        5,
+        3,
+        0
+      ],
+      "cost": 16,
+      "entries": 8
+    },
+    {
+      "union": [
+        5,
+        3,
+        0
+      ],
+      "retained": [
+        5,
+        3,
+        0
+      ],
+      "cost": 8,
+      "entries": 8
+    },
+    {
+      "union": [
+        5,
+        3,
+        0,
+        4,
+        2
+      ],
+      "retained": [
+        5,
+        3,
+        0,
+        4,
+        2
+      ],
+      "cost": 32,
+      "entries": 32
+    },
+    {
+      "union": [
+        5,
+        3,
+        0,
+        4,
+        2
+      ],
+      "retained": [
+        5,
+        3,
+        4,
+        2
+      ],
+      "cost": 32,
+      "entries": 16
+    },
+    {
+      "union": [
+        5,
+        4,
+        3,
+        2
+      ],
+      "retained": [],
+      "cost": 16,
+      "entries": 1
+    }
+  ]
+}
