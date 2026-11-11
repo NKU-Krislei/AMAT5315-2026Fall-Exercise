@@ -1,0 +1,18 @@
+usage = "thermo --method boundary --l 64 --k 0.45 --chi 16 --out runs/boundary64"
+description = """Compute the zero-field square Ising partition function;
+no unstated defaults"""
+
+[args]
+l = "Side length of the square, at least 2"
+k = "Inverse temperature K=1/T, with J=k_B=1 and K>=0"
+chi = "Maximum retained bond dimension, at least 1"
+out = "Directory for this run's raw evidence"
+[args.boundary]
+method = "boundary: absorb rows with an MPS on an open square"
+[writes]
+evidence = """
+Save the model, geometry, settings, log Z, g=log(Z)/L^2 and solver time.
+Write the final tensors, normalization scales and truncation diagnostics.
+Keep full floating-point precision in the saved evidence.
+Record enough information to recompute the final contraction independently.
+"""
