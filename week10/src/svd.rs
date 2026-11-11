@@ -3,9 +3,9 @@
 //! Wraps faer's SVD in a row-major interface and implements the two routines from
 //! the learning sheet: Algorithm 1 (TruncatedSVD) and Algorithm 2 (Split).
 
-use faer::dyn_stack::PodStack;
-use faer::linalg::svd::{compute_svd, compute_svd_req, ComputeVectors, SvdParams};
-use faer::{Col, Mat, Parallelism};
+use dyn_stack::MemBuffer;
+use faer::linalg::svd::{svd, svd_scratch, ComputeSvdVectors, SvdParams};
+use faer::{Auto, Mat, Par, Spec};
 
 /// Result of an SVD of an `m x n` matrix: `a = U diag(s) Vt`, row-major storage.
 ///
@@ -67,29 +67,24 @@ pub fn svd_row_major(m: usize, n: usize, a: &[f64]) -> Svd {
         }
     }
     let k = m.min(n);
-    let params = SvdParams::default();
-    let par = Parallelism::Rayon(0);
-    let req = compute_svd_req::<f64>(m, n, ComputeVectors::Thin, ComputeVectors::Thin, par, params)
-        .expect("SVD stack size overflow");
-    // dyn-stack on stable rust takes a raw aligned byte buffer.
-    let size = req.size_bytes();
-    let align = req.align_bytes();
-    let mut buf = vec![0u8; size + align];
-    let base = buf.as_mut_ptr() as usize;
-    let off = (align - (base % align)) % align;
-    let stack = PodStack::new(&mut buf[off..off + size]);
-    let mut s = Col::<f64>::zeros(k);
+    let params = Spec::new(<SvdParams as Auto<f64>>::auto());
+    let par = Par::rayon(0);
+    let req = svd_scratch::<f64>(m, n, ComputeSvdVectors::Thin, ComputeSvdVectors::Thin, par, params);
+    let mut mem = MemBuffer::new(req);
+    let stack = dyn_stack::MemStack::new(&mut mem);
+    let mut smat = Mat::<f64>::zeros(m, n);
     let mut u = Mat::<f64>::zeros(m, k);
     let mut v = Mat::<f64>::zeros(n, k);
-    compute_svd(
+    svd(
         mat.as_ref(),
-        s.as_mut(),
+        smat.as_mut().diagonal_mut(),
         Some(u.as_mut()),
         Some(v.as_mut()),
         par,
         stack,
         params,
-    );
+    )
+    .expect("SVD failed to converge");
     // faer returns M = U diag(s) V^H; for real matrices Vt = V^T.
     let mut out = Svd {
         m,
@@ -100,9 +95,13 @@ pub fn svd_row_major(m: usize, n: usize, a: &[f64]) -> Svd {
         vt: vec![0.0; k * n],
     };
     let mut perm: Vec<usize> = (0..k).collect();
-    perm.sort_by(|&x, &y| s.read(y).partial_cmp(&s.read(x)).unwrap());
+    perm.sort_by(|&x, &y| {
+        smat.get(y, y)
+            .partial_cmp(smat.get(x, x))
+            .unwrap()
+    });
     for (col, &src) in perm.iter().enumerate() {
-        out.s[col] = s.read(src);
+        out.s[col] = *smat.get(src, src);
         for i in 0..m {
             out.u[i * k + col] = *u.get(i, src);
         }
@@ -120,6 +119,34 @@ pub fn truncated_svd(m: usize, n: usize, a: &[f64], chi: usize) -> Svd {
     svd_row_major(m, n, a).truncated(chi)
 }
 
+/// Algorithm 2 wrapper: Split(T, I, J, chi) returning only the two factors.
+pub fn split4(
+    dims: [usize; 4],
+    data: &[f64],
+    group_left: [usize; 2],
+    group_right: [usize; 2],
+    chi: usize,
+) -> (Vec<usize>, Vec<f64>, Vec<usize>, Vec<f64>) {
+    let f = split4_full(dims, data, group_left, group_right, chi);
+    (f.xdims, f.x, f.ydims, f.y)
+}
+
+/// Full output of a four-leg tensor split, including the untruncated
+/// singular spectrum for diagnostics.
+#[derive(Debug, Clone)]
+pub struct Split4 {
+    /// Factor X with legs `group_left + [q]`, row-major.
+    pub xdims: Vec<usize>,
+    pub x: Vec<f64>,
+    /// Factor Y with legs `[q] + group_right`, row-major.
+    pub ydims: Vec<usize>,
+    pub y: Vec<f64>,
+    /// Full singular spectrum of the grouped matrix, descending.
+    pub spectrum: Vec<f64>,
+    /// Number of retained directions (min(chi, spectrum.len())).
+    pub kept: usize,
+}
+
 /// Algorithm 2: Split(T, I, J, chi) for a four-leg tensor stored row-major in
 /// the leg order `(a0, a1, a2, a3)`.
 ///
@@ -128,16 +155,13 @@ pub fn truncated_svd(m: usize, n: usize, a: &[f64], chi: usize) -> Svd {
 /// left group comes first, flattened into a matrix, truncated-SVD'd with cap
 /// `chi`, and the singular values are shared as sqrt(s) between the two
 /// factors.
-///
-/// Returns `(x, y)` where `x` has legs `group_left + [q]`, `y` has legs
-/// `[q] + group_right`, and `q` runs over at most `chi` retained directions.
-pub fn split4(
+pub fn split4_full(
     dims: [usize; 4],
     data: &[f64],
     group_left: [usize; 2],
     group_right: [usize; 2],
     chi: usize,
-) -> (Vec<usize>, Vec<f64>, Vec<usize>, Vec<f64>) {
+) -> Split4 {
     let mut perm = [group_left[0], group_left[1], group_right[0], group_right[1]];
     perm.sort(); // sanity: the two groups must partition the legs
     debug_assert_eq!(perm, [0, 1, 2, 3], "groups must partition the four legs");
@@ -169,7 +193,9 @@ pub fn split4(
     }
     } // scope borrow of strides
 
-    let f = truncated_svd(dl, dr, &mbuf, chi);
+    // Full spectrum first (for diagnostics), then truncate.
+    let full = svd_row_major(dl, dr, &mbuf);
+    let f = full.truncated(chi);
     let q = f.k;
     let mut sqrt_s = vec![0.0; q];
     for a in 0..q {
@@ -191,7 +217,14 @@ pub fn split4(
     }
     let xdims: Vec<usize> = vec![dims[group_left[0]], dims[group_left[1]], q];
     let ydims: Vec<usize> = vec![q, dims[group_right[0]], dims[group_right[1]]];
-    (xdims, x, ydims, y)
+    Split4 {
+        xdims,
+        x,
+        ydims,
+        y,
+        spectrum: full.s,
+        kept: q,
+    }
 }
 
 #[cfg(test)]

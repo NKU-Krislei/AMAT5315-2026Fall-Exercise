@@ -16,3 +16,9 @@ Write the final tensors, normalization scales and truncation diagnostics.
 Keep full floating-point precision in the saved evidence.
 Record enough information to recompute the final contraction independently.
 """
+[args.trg]
+method = "trg: coarse-grain a periodic square; L must be a power of two"
+[writes.trg]
+evidence = """
+Save each step's scale, split factors and singular values, plus the final tensor.
+"""

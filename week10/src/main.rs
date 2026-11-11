@@ -12,6 +12,7 @@ use serde_json::json;
 
 use thermo::boundary::contract_open_square;
 use thermo::evidence as ev;
+use thermo::trg::contract_periodic_square;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -57,6 +58,9 @@ fn parse_args() -> Result<Args, String> {
     if method != "boundary" && method != "trg" {
         return Err(format!("unknown method {method}"));
     }
+    if method == "trg" && !l.is_power_of_two() {
+        return Err("--l must be a power of two for TRG".to_string());
+    }
     Ok(Args { method, l, k, chi, out })
 }
 
@@ -70,12 +74,22 @@ fn main() -> ExitCode {
     };
     match args.method.as_str() {
         "boundary" => run_boundary(&args),
-        "trg" => {
-            eprintln!("thermo: method 'trg' arrives in Part 3 of the week");
-            ExitCode::FAILURE
-        }
+        "trg" => run_trg(&args),
         _ => ExitCode::FAILURE,
     }
+}
+
+fn run_trg(args: &Args) -> ExitCode {
+    let res = contract_periodic_square(args.l, args.k, args.chi);
+    if let Err(e) = write_trg_evidence(args, &res) {
+        eprintln!("thermo: writing evidence failed: {e}");
+        return ExitCode::FAILURE;
+    }
+    println!(
+        "trg (periodic square) L={} K={} chi={}: log Z = {:.12}, g = {:.12}, solver {:.3}s",
+        args.l, args.k, args.chi, res.log_z, res.g, res.elapsed_sec
+    );
+    ExitCode::SUCCESS
 }
 
 fn run_boundary(args: &Args) -> ExitCode {
@@ -131,6 +145,56 @@ fn write_boundary_evidence(args: &Args, res: &thermo::boundary::BoundaryResult) 
         "final_cores_dims": dims,
         "recompute_hint": "contract the cores in order, closing every physical leg with b(K) = [1/sqrt(cosh K), 0]; log Z = ell + log(scalar)",
         "solver_time_sec": total_time,
+        "timestamp_utc": ev::utc_timestamp(),
+    });
+    ev::write_json(&args.out.join("run.json"), &run)
+}
+
+fn write_trg_evidence(args: &Args, res: &thermo::trg::TrgResult) -> std::io::Result<()> {
+    ev::ensure_dir(&args.out)?;
+    // Per-step split factors: one binary per step, dims in the JSON.
+    let mut steps_json = Vec::new();
+    for st in &res.steps {
+        let fname = format!("step{:02}_factors.bin", st.step);
+        let mut flat: Vec<f64> = Vec::new();
+        for f in &st.factors {
+            flat.extend_from_slice(f);
+        }
+        ev::write_f64_bin(&args.out.join(&fname), &flat)?;
+        steps_json.push(json!({
+            "step": st.step,
+            "num_tensors": st.num_tensors,
+            "scale": st.scale,
+            "kept": st.kept,
+            "discarded": st.discarded,
+            "singular_values_1": st.spectrum_1,
+            "singular_values_2": st.spectrum_2,
+            "factors_dims": st.factors_dims,
+            "factors_file": fname,
+        }));
+    }
+    ev::write_f64_bin(&args.out.join("final_tensor.bin"), &res.final_tensor)?;
+    let run = json!({
+        "tool": "thermo",
+        "version": VERSION,
+        "method": "trg",
+        "model": "square-lattice Ising",
+        "hamiltonian": "H = -sum_edges s_i*s_j, s_i in {+1,-1}, J = k_B = 1, no field",
+        "geometry": "periodic",
+        "settings": {
+            "l": args.l,
+            "k": args.k,
+            "chi": args.chi,
+        },
+        "log_z": res.log_z,
+        "g": res.g,
+        "ell": res.ell,
+        "closure_z": res.closure_z,
+        "steps": steps_json,
+        "final_tensor_file": "final_tensor.bin",
+        "final_tensor_dims": res.final_dims,
+        "recompute_hint": "log Z = ell + log(sum_{i,j} A[i,j,i,j]) from the saved final tensor",
+        "solver_time_sec": res.elapsed_sec,
         "timestamp_utc": ev::utc_timestamp(),
     });
     ev::write_json(&args.out.join("run.json"), &run)
