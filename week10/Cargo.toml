@@ -1,0 +1,21 @@
+[package]
+name = "thermo"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83"
+description = "Square-lattice Ising partition functions by boundary-MPS and TRG contraction, plus SVD compression evidence"
+
+[dependencies]
+faer = "0.20.2"
+rand = "0.9.5"
+rand_distr = "0.5.1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+[[bin]]
+name = "svd"
+path = "src/svd_bin.rs"
+
+[profile.release]
+lto = false
+codegen-units = 1

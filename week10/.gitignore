@@ -1,0 +1,6 @@
+target/
+runs/
+artifacts/
+data/
+__pycache__/
+*.pyc
