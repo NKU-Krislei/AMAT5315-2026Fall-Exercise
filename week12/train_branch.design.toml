@@ -1,0 +1,17 @@
+usage = """uv run --with jax==0.12.1 python train_branch.py --dataset artifacts/bnb_strong/dataset.json --out artifacts/model.json"""
+
+[benchmark.model]
+precision = "64-bit JAX on CPU"
+input = "standardize each feature using training mean and std (floor 1e-6)"
+score = "one shared MLP per spin: 12 inputs, 48 tanh units, one score"
+probability = "masked softmax over the candidate spins at this node"
+
+[benchmark.training]
+split = "verify that training and validation share no spin-glass instance"
+target = "uniform over scores within 1e-9 * max(1, abs(best)) of the best"
+objective = "cross-entropy + 2e-4 times the sum of squared weights, biases excluded"
+optimizer = "Adam, learning rate 4e-3, batch size 64, 120 epochs, seed 2026"
+history = "save training and validation cross-entropy alone at each epoch"
+checkpoint = "lowest validation cross-entropy among epoch 1 and every fifth epoch"
+output = "weights, training mean and std, history, and 6 validation parity probes"
+probes = "save candidate features, logits and JAX probabilities for each probe"

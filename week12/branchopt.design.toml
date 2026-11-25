@@ -1,0 +1,115 @@
+usage = """branchopt --mode gap --spins 22 --edges 52 --count 16 --seed 2026 --out artifacts/gap"""
+description = "Solve spin-glass integer programs and compare branching rules"
+
+[args]
+mode = "study mode: gap | bnb | eval"
+spins = "number of spins n of each random Spin Glass instance"
+edges = "number of undirected bonds m of each random Spin Glass instance"
+count = "number of random instances, numbered 0 to count - 1"
+seed = "random seed, recorded with the run"
+out = "directory for this run's raw evidence"
+
+[args.bnb]
+policy = "branching rule: most-frac | strong | neural | root-neural"
+
+[args.labels]
+export-labels = "record Strong Branching training data in bnb mode; default off"
+
+[args.eval]
+model = "network weights written by train_branch.py; default absent"
+
+[benchmark.gap]
+highs = { presolve = false, threads = 1 }
+model = """
+min sum_e J_e (1 - 2 z_e) + sum_i h_i (1 - 2 x_i), x_i binary, z_e in [0,1].
+For each bond e=(u,v): z_e <= x_u+x_v, z_e <= 2-x_u-x_v,
+z_e >= x_u-x_v, z_e >= x_v-x_u.
+"""
+square = """
+Cycle 0-1-2-3-0, J=(+1,+1,+1,-1), h=0. Report LP and integer spins and
+energies, and the energy after nearest rounding (x_i >= 0.5 gives 1).
+"""
+diet = """
+Minimize 6x1 + 3.5x2 with 7x2 >= 8, 4x1+2x2 >= 15, 2x1+x2 >= 3 and x >= 0.
+Report the optimal quantities and cost.
+"""
+generator = """
+SplitMix64 (arithmetic mod 2^64):
+next(): state += 0x9E3779B97F4A7C15; z = state
+z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+z = (z ^ (z >> 27)) * 0x94D049BB133111EB; return z ^ (z >> 31)
+integer in {0..k-1}: next() mod k
+Instance id starts from state = first next() of a generator whose state is
+seed XOR (id * 0xD1B54A32D192ED03). Build the edge set E as pairs (u < v):
+first, for i = 0..n-1, while deg(i) < min(2, n-1), draw j in {0..n-1} and add
+(min(i,j), max(i,j)) if j != i and not already in E. Next, while |E| < m, draw
+i then j in {0..n-1} and add (min(i,j), max(i,j)) if i != j and not in E. Sort
+E lexicographically by (u, v). For each sorted bond draw J_e = +1 if
+(next() & 1) == 0 else -1. For each spin i = 0..n-1 draw h_i = (next() mod 3) - 1.
+"""
+evidence = """
+Save each LP bound, integer optimum, gap, fractional spin count
+(1e-6 < x_i < 1 - 1e-6), nearest-rounded energy and its excess.
+"""
+
+[benchmark.bnb]
+search = """
+Start a depth-first search with no incumbent. Prune infeasible LPs and bounds
+>= incumbent - 1e-6. Branch on a free spin with 1e-6 < x_i < 1 - 1e-6.
+Visit the child nearer its LP value first (at 0.5, visit x_i=1 first).
+"""
+policies = """
+Most-frac picks the spin closest to 0.5. Strong probes both child LPs for
+every candidate and maximizes max(d0,1e-6) * max(d1,1e-6). A gain is the
+child bound minus the parent bound, or 1e6 if pruned or infeasible. Count
+trial LPs and leave the incumbent unchanged. Break ties by lowest spin index.
+"""
+evidence = """
+Trace most-frac on the tetrahedron (all six bonds J=+1, h=(1,0,0,0)).
+Save each branch, status, LP bound and spin values. For each random graph
+record energy, error against HiGHS, nodes, LP solves and elapsed search time.
+"""
+
+[benchmark.bnb.features]
+labels = """
+Record nodes with at least 2 candidates, at most 80 per instance. Instances 0 to
+35 train and instances 36 to 47 validate. For each candidate spin i store its two
+child gains, its product score, how many trial children were pruned, and these
+12 features (let x_v be clamped to [0, 1], s_v = 1 - 2 x_v, deg(i) = incident
+bond count, d_max = max_v deg(v), and d_dual = max(1e-9, max_r |dual_r|)):
+x_val x_i
+frac_dist 2 min(x_i, 1 - x_i)
+field_h local field h_i
+abs_field_h |h_i|
+deg_norm deg(i) / max(1, d_max)
+bond_bias (count(J_e > 0) - count(J_e < 0)) / max(1, deg(i)) over i's bonds
+eff_field (h_i + sum_(e=(i,j)) J_e s_j) / (deg(i) + 1)
+abs_eff_field |eff_field|
+mean_bond_dual mean over i's bonds e of (sum of the 4 |dual_(e,r)|) / d_dual
+mean_bond_gap mean over i's bonds e=(i,j) of |z_e - 0.5 (1 - s_i s_j)|
+mean_nbr_frac mean over i's neighbors j of frac_dist_j (0 if j is fixed)
+gap_ratio clamp((z_best - z_node) / max(|z_best|, 1), 0, 2); 1 if no incumbent
+"""
+
+[benchmark.eval]
+policies = """
+Compare Rust probabilities with all six JAX probes. Run most-frac, strong
+and neural. Neural scores each fractional spin with the trained MLP using
+the saved training statistics. Split on the highest score.
+For each policy save energy error against HiGHS, nodes, LP solves and wall
+time. Where neural saves the most nodes over most-frac, record their first two splits.
+"""
+
+[benchmark.eval.root_neural]
+policy = """
+Score all n spins at the root. Subtract their mean and divide by max(std,1e-6).
+At each branch maximize this root score + 3 * 2 min(x_i,1-x_i) over candidates.
+"""
+timing = "Record total search wall time, LP time and feature-plus-inference time."
+
+[writes]
+stdout = "tab-separated table with header: mode, metric, value, runtime_ms"
+"<out>/run.json" = "schema, mode, seed, parameters, summary and raw evidence"
+
+[writes.labels]
+"<out>/dataset.json" = "the recorded training and validation nodes, in full precision"

@@ -1,0 +1,13 @@
+[package]
+name = "branchopt"
+version = "0.1.0"
+edition = "2021"
+description = "Spin-glass integer programs, branch-and-bound, and learned branching"
+
+[[bin]]
+name = "branchopt"
+path = "src/main.rs"
+
+[dependencies]
+highs = "=2.4.0"
+serde_json = "1"
